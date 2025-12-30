@@ -6,6 +6,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import Count, Q, F
+from django.db.models.functions import TruncDate, TruncMonth, ExtractWeekDay, ExtractHour
+from django.utils import timezone
+from datetime import timedelta
 from .models import User
 from .serializers import (
     UserRegistrationSerializer,
@@ -206,4 +210,103 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response({
             'message': f'User {user.email} deactivated successfully',
             'user': UserSerializer(user).data
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Admin: Get comprehensive user statistics"""
+        now = timezone.now()
+        thirty_days_ago = now - timedelta(days=30)
+        
+        # Basic counts
+        total_users = User.objects.count()
+        active_users = User.objects.filter(status='ACTIVE').count()
+        inactive_users = User.objects.filter(status='INACTIVE').count()
+        admin_users = User.objects.filter(role='ADMIN').count()
+        regular_users = User.objects.filter(role='USER').count()
+        
+        # Recent registrations (last 30 days)
+        recent_registrations = User.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).count()
+        
+        # Growth data (last 30 days, grouped by day)
+        growth_data = list(
+            User.objects.filter(created_at__gte=thirty_days_ago)
+            .annotate(date=TruncDate('created_at'))
+            .values('date')
+            .annotate(count=Count('id'))
+            .order_by('date')
+        )
+        
+        # Monthly registrations (last 12 months)
+        twelve_months_ago = now - timedelta(days=365)
+        monthly_data = list(
+            User.objects.filter(created_at__gte=twelve_months_ago)
+            .annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(count=Count('id'))
+            .order_by('month')
+        )
+        
+        # Day of week distribution
+        day_of_week_data = list(
+            User.objects.annotate(day_of_week=ExtractWeekDay('created_at'))
+            .values('day_of_week')
+            .annotate(count=Count('id'))
+            .order_by('day_of_week')
+        )
+        
+        # Account age distribution
+        account_ages = []
+        for user in User.objects.all():
+            days_old = (now - user.created_at).days
+            if days_old < 30:
+                category = '0-30 days'
+            elif days_old < 90:
+                category = '30-90 days'
+            elif days_old < 180:
+                category = '90-180 days'
+            elif days_old < 365:
+                category = '180-365 days'
+            else:
+                category = '1+ years'
+            account_ages.append(category)
+        
+        age_distribution = {}
+        for age in account_ages:
+            age_distribution[age] = age_distribution.get(age, 0) + 1
+        
+        # Email domain analysis
+        email_domains = {}
+        for user in User.objects.all():
+            domain = user.email.split('@')[1] if '@' in user.email else 'unknown'
+            email_domains[domain] = email_domains.get(domain, 0) + 1
+        
+        # Sort and get top 10 domains
+        top_domains = sorted(email_domains.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        # Dormant accounts (no last_login or last login > 30 days ago)
+        dormant_count = User.objects.filter(
+            Q(last_login__isnull=True) | Q(last_login__lt=thirty_days_ago)
+        ).count()
+        
+        # Recent users (last 10)
+        recent_users = User.objects.order_by('-created_at')[:10]
+        recent_users_data = UserSerializer(recent_users, many=True, context={'request': request}).data
+        
+        return Response({
+            'total_users': total_users,
+            'active_users': active_users,
+            'inactive_users': inactive_users,
+            'admin_users': admin_users,
+            'regular_users': regular_users,
+            'recent_registrations': recent_registrations,
+            'dormant_accounts': dormant_count,
+            'growth_data': growth_data,
+            'monthly_data': monthly_data,
+            'day_of_week_data': day_of_week_data,
+            'age_distribution': age_distribution,
+            'email_domains': [{'domain': domain, 'count': count} for domain, count in top_domains],
+            'recent_users': recent_users_data,
         }, status=status.HTTP_200_OK)

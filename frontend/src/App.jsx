@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Home from './pages/Home';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminStatistics from './pages/AdminStatistics';
 import UserProfile from './pages/UserProfile';
 import NotFound from './pages/NotFound';
 import { ROLES } from './utils/constants';
@@ -38,6 +39,15 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/statistics" 
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                  <AdminStatistics />
                 </ProtectedRoute>
               } 
             />

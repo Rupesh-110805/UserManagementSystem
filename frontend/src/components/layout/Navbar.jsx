@@ -55,12 +55,20 @@ export default function Navbar() {
             </span>
             
             {user?.role === ROLES.ADMIN && (
-              <Link 
-                to="/admin/dashboard" 
-                className="px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                Dashboard
-              </Link>
+              <>
+                <Link 
+                  to="/admin/dashboard" 
+                  className="px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  to="/admin/statistics" 
+                  className="px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  Statistics
+                </Link>
+              </>
             )}
             
             <Link 
@@ -103,13 +111,22 @@ export default function Navbar() {
             </div>
             
             {user?.role === ROLES.ADMIN && (
-              <Link 
-                to="/admin/dashboard" 
-                className="block px-3 py-2 rounded-md hover:bg-gray-100"
-                onClick={() => setIsOpen(false)}
-              >
-                Dashboard
-              </Link>
+              <>
+                <Link 
+                  to="/admin/dashboard" 
+                  className="block px-3 py-2 rounded-md hover:bg-gray-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  to="/admin/statistics" 
+                  className="block px-3 py-2 rounded-md hover:bg-gray-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Statistics
+                </Link>
+              </>
             )}
             
             <Link 
