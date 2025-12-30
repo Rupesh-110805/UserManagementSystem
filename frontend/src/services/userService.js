@@ -30,4 +30,21 @@ export const userService = {
     const { data } = await api.post('/users/change_password/', passwordData);
     return data;
   },
+
+  uploadProfilePicture: async (file) => {
+    const formData = new FormData();
+    formData.append('profile_picture', file);
+
+    const { data } = await api.post('/users/upload_profile_picture/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
+  deleteProfilePicture: async () => {
+    const { data } = await api.delete('/users/delete_profile_picture/');
+    return data;
+  },
 };

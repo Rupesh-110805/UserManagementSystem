@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HiMenu, HiX, HiUser, HiLogout } from 'react-icons/hi';
+import { FiUser } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import { ROLES } from '../../utils/constants';
 
@@ -31,6 +32,21 @@ export default function Navbar() {
 
           {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Profile Picture */}
+            <Link to="/profile" className="flex items-center">
+              {user?.profile_picture_url ? (
+                <img 
+                  src={user.profile_picture_url} 
+                  alt={user.full_name}
+                  className="w-8 h-8 rounded-full object-cover border-2 border-gray-300"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
+                  {user?.full_name?.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </Link>
+            
             <span className="text-gray-700">
               Welcome, <span className="font-semibold">{user?.full_name}</span>
             </span>

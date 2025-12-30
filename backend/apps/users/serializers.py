@@ -45,13 +45,25 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for user profile display"""
+    profile_picture_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = User
         fields = (
             'id', 'email', 'full_name', 'role', 'status',
+            'profile_picture', 'profile_picture_url',
             'last_login', 'created_at', 'updated_at'
         )
-        read_only_fields = ('id', 'role', 'created_at', 'updated_at', 'last_login')
+        read_only_fields = ('id', 'role', 'created_at', 'updated_at', 'last_login', 'profile_picture_url')
+    
+    def get_profile_picture_url(self, obj):
+        """Return full URL for profile picture"""
+        request = self.context.get('request')
+        if obj.profile_picture and hasattr(obj.profile_picture, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            return obj.profile_picture.url
+        return None
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -65,6 +77,64 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         if User.objects.exclude(pk=user.pk).filter(email=value).exists():
             raise serializers.ValidationError("Email already in use.")
+        return value
+
+
+class ProfilePictureUploadSerializer(serializers.Serializer):
+    """Serializer for profile picture upload with validation"""
+    profile_picture = serializers.ImageField(
+        required=True,
+        allow_empty_file=False,
+        use_url=True
+    )
+    
+    def validate_profile_picture(self, value):
+        """Validate profile picture"""
+        from PIL import Image
+        
+        # Check file size (5MB max)
+        max_size = 5 * 1024 * 1024  # 5MB in bytes
+        if value.size > max_size:
+            raise serializers.ValidationError(
+                f"Image file too large. Max size is 5MB. Your file is {value.size / (1024*1024):.2f}MB"
+            )
+        
+        # Check file extension
+        allowed_extensions = ['jpg', 'jpeg', 'png', 'webp']
+        ext = value.name.split('.')[-1].lower()
+        if ext not in allowed_extensions:
+            raise serializers.ValidationError(
+                f"Unsupported file extension '{ext}'. Allowed: {', '.join(allowed_extensions)}"
+            )
+        
+        # Validate image dimensions
+        try:
+            img = Image.open(value)
+            width, height = img.size
+            
+            # Maximum dimensions
+            max_dimension = 2048
+            if width > max_dimension or height > max_dimension:
+                raise serializers.ValidationError(
+                    f"Image dimensions too large. Maximum {max_dimension}x{max_dimension}px. "
+                    f"Your image is {width}x{height}px"
+                )
+            
+            # Minimum dimensions
+            min_dimension = 100
+            if width < min_dimension or height < min_dimension:
+                raise serializers.ValidationError(
+                    f"Image too small. Minimum {min_dimension}x{min_dimension}px. "
+                    f"Your image is {width}x{height}px"
+                )
+            
+            # Validate image format
+            if img.format not in ['JPEG', 'PNG', 'WEBP']:
+                raise serializers.ValidationError("Invalid image format")
+            
+        except Exception as e:
+            raise serializers.ValidationError(f"Invalid image file: {str(e)}")
+        
         return value
 
 
@@ -109,6 +179,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if self.user.status == 'INACTIVE':
             raise serializers.ValidationError('Account is deactivated.')
         
+        # Get profile picture URL
+        profile_picture_url = None
+        if self.user.profile_picture:
+            from django.contrib.sites.shortcuts import get_current_site
+            request = self.context.get('request')
+            if request:
+                profile_picture_url = request.build_absolute_uri(self.user.profile_picture.url)
+            else:
+                profile_picture_url = self.user.profile_picture.url
+        
         # Add user data to response
         data['user'] = {
             'id': self.user.id,
@@ -116,6 +196,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'full_name': self.user.full_name,
             'role': self.user.role,
             'status': self.user.status,
+            'profile_picture_url': profile_picture_url,
         }
         
         return data

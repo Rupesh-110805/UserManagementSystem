@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import PasswordUpdateForm from '../components/PasswordUpdateForm';
+import ProfilePictureUpload from '../components/ProfilePictureUpload';
 import { toast } from 'react-hot-toast';
 import { userService } from '../services/userService';
 import { validateEmail, validateRequired } from '../utils/validators';
@@ -85,13 +86,40 @@ export default function UserProfile() {
     setIsEditingProfile(false);
   };
 
+  const handleProfilePictureUpload = async (file) => {
+    try {
+      const response = await userService.uploadProfilePicture(file);
+      updateUser(response.user);
+      return response;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Failed to upload profile picture');
+    }
+  };
+
+  const handleProfilePictureDelete = async () => {
+    try {
+      const response = await userService.deleteProfilePicture();
+      updateUser(response.user);
+      return response;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Failed to delete profile picture');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
 
+        {/* Profile Picture */}
+        <ProfilePictureUpload
+          currentPictureUrl={user?.profile_picture_url}
+          onUpload={handleProfilePictureUpload}
+          onDelete={handleProfilePictureDelete}
+        />
+
         {/* Profile Information */}
-        <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+        <div className="bg-white shadow-md rounded-lg p-6 mb-6 mt-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Profile Information</h2>
             {!isEditingProfile && (

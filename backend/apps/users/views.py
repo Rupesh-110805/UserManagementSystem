@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
@@ -11,7 +12,8 @@ from .serializers import (
     UserSerializer,
     UserUpdateSerializer,
     ChangePasswordSerializer,
-    CustomTokenObtainPairSerializer
+    CustomTokenObtainPairSerializer,
+    ProfilePictureUploadSerializer
 )
 from .permissions import IsAdminUser
 
@@ -75,6 +77,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """ViewSet for user operations"""
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     
     def get_permissions(self):
         """Set permissions based on action"""
@@ -125,6 +128,50 @@ class UserViewSet(viewsets.ModelViewSet):
         
         return Response({
             'message': 'Password updated successfully'
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_profile_picture(self, request):
+        """Upload profile picture for current user"""
+        serializer = ProfilePictureUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Delete old profile picture if exists
+        if request.user.profile_picture:
+            request.user.delete_profile_picture()
+        
+        # Save new profile picture
+        request.user.profile_picture = serializer.validated_data['profile_picture']
+        request.user.save()
+        
+        # Return updated user data with profile picture URL
+        user_serializer = UserSerializer(request.user, context={'request': request})
+        
+        return Response({
+            'message': 'Profile picture uploaded successfully',
+            'user': user_serializer.data
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['delete'])
+    def delete_profile_picture(self, request):
+        """Delete profile picture for current user"""
+        if not request.user.profile_picture:
+            return Response(
+                {'error': 'No profile picture to delete'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Delete the profile picture
+        request.user.delete_profile_picture()
+        request.user.profile_picture = None
+        request.user.save()
+        
+        # Return updated user data
+        user_serializer = UserSerializer(request.user, context={'request': request})
+        
+        return Response({
+            'message': 'Profile picture deleted successfully',
+            'user': user_serializer.data
         }, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['post'])

@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+﻿from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 from PIL import Image
@@ -7,14 +7,14 @@ from .managers import UserManager
 
 
 def user_profile_picture_path(instance, filename):
-    """Generate upload path for profile pictures"""
+    '''Generate upload path for profile pictures'''
     ext = filename.split('.')[-1]
     filename = f'user_{instance.id}_profile.{ext}'
     return os.path.join('profile_pictures', filename)
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    """Custom User model with email as username field"""
+    '''Custom User model with email as username field'''
     
     class Role(models.TextChoices):
         ADMIN = 'ADMIN', 'Admin'
@@ -69,11 +69,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     @property
     def is_admin(self):
-        """Check if user has admin role"""
+        '''Check if user has admin role'''
         return self.role == self.Role.ADMIN
     
     def save(self, *args, **kwargs):
-        """Optimize profile picture on save"""
+        '''Optimize profile picture on save'''
         super().save(*args, **kwargs)
         
         if self.profile_picture:
@@ -101,7 +101,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                 print(f'Error optimizing profile picture: {e}')
     
     def delete_profile_picture(self):
-        """Delete profile picture file from storage"""
+        '''Delete profile picture file from storage'''
         if self.profile_picture:
             if os.path.isfile(self.profile_picture.path):
                 os.remove(self.profile_picture.path)
