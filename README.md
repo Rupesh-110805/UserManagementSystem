@@ -518,8 +518,8 @@ This project is created for assessment purposes.
 
 ## 👨‍💻 Author
 
-[Your Name]
+[N. S. S. Rupesh]
 
 ## 📧 Contact
 
-For any questions or issues, please contact: [your-email@example.com]
+For any questions or issues, please contact: [rupeshnidadavolu110805@gmail.com]
